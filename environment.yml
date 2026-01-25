@@ -1,0 +1,20 @@
+name: fake-news-env
+channels:
+  - conda-forge
+  - pytorch
+  - huggingface
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - pip:
+    - streamlit
+    - langchain
+    - langchain-huggingface
+    - sentence-transformers
+    - transformers
+    - torch
+    - huggingface-hub
+    - python-dotenv
