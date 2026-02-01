@@ -29,10 +29,11 @@ def detect_red_flags(text: str):
     if len(text.split()) < 6:
         flags.append("Very short claim")
 
-    if any(x in text.lower() for x in ["killed", "dies", "dead", "plane crash"]):
+    if any(w in text.lower() for w in ["killed", "dies", "dead", "crash"]):
         flags.append("High-risk event claim")
 
     if any(c.isdigit() for c in text):
         flags.append("Numeric claim without citation")
 
     return flags
+

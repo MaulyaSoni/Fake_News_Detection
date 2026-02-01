@@ -35,25 +35,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- HELPERS ----------------
+# ---------------- VERDICT STYLING ----------------
 def verdict_style(verdict: str):
     styles = {
-        "REAL": ("#2ecc71", "✅"),
-        "LIKELY REAL": ("#27ae60", "🟢"),
+        "REAL": ("#08ff6f", "✅"),
+        "LIKELY_REAL (as one article found)": ("#33b159", "🟡"),
         "UNVERIFIED": ("#f1c40f", "⚠️"),
-        "UNVERIFIED (NO CONFIRMATION)": ("#e67e22", "🟠"),
-        "FAKE": ("#e74c3c", "❌"),
+        "LIKELY_FAKE (NO_VERIFIED_EVIDENCE)": ("#ce2c2c", "❓"),
+        "FAKE": ("#ff1900", "❌"),
     }
-    return styles.get(verdict.upper(), ("#95a5a6", "❓"))
+    return styles.get(verdict, ("#95a5a6", "❓"))
 
 # ---------------- UI ----------------
 st.title("📰 Fake News Detection System")
-st.write("Verify news claims using **ML confidence + real-time trusted evidence**")
+st.write("Verify news claims using **NLI reasoning + real-time trusted evidence**")
 
 text = st.text_area(
     "Enter news claim",
     height=140,
-    placeholder="FAKE NEWS Example: Pakistan won the cricket match against India"
+    placeholder="Example: India lost the 2007 T20 World Cup final against Pakistan"
 )
 
 # ---------------- VERIFY BUTTON ----------------
@@ -65,15 +65,15 @@ if st.button("🔍 Verify News"):
         st.stop()
 
     # 2️⃣ Loading animation
-    with st.spinner("🧠 AI is analysing the news..."):
-        time.sleep(0.8)
+    with st.spinner("🧠 AI is analysing the claim using real-time evidence..."):
+        time.sleep(0.6)
         result = evaluate_news(text)
 
     # ---------------- RESULTS ----------------
-    verdict = result.get("final_verdict", "UNVERIFIED")
-    ml_conf = result.get("ml_confidence", 0)
+    verdict = result.get("verdict", "UNVERIFIED")
     flags = result.get("flags", [])
     evidence = result.get("evidence", [])
+    nli = result.get("nli", {})
 
     color, emoji = verdict_style(verdict)
 
@@ -82,9 +82,7 @@ if st.button("🔍 Verify News"):
     st.markdown(
         f"""
         <div class="verdict-box" style="background-color:{color};">
-            <br>
-            {emoji} {verdict}<br><br>
-            ML Confidence: {ml_conf:.1f} %
+            {emoji} {verdict.replace("_", " ")}
         </div>
         """,
         unsafe_allow_html=True
@@ -92,21 +90,32 @@ if st.button("🔍 Verify News"):
 
     st.markdown("---")
 
-    # 4️⃣ Red flags
+    # 4️⃣ Explanation
+    st.subheader("🧠 Reasoning Summary")
+    if nli:
+        st.write(
+            f"• Supporting articles: **{nli.get('support', 0)}**  \n"
+            f"• Contradicting articles: **{nli.get('contradict', 0)}**  \n"
+            f"• Neutral mentions: **{nli.get('neutral', 0)}**"
+        )
+    else:
+        st.write("No NLI reasoning available.")
+
+    # 5️⃣ Red flags
     if flags:
         st.subheader("⚠️ Red Flags")
         for f in flags:
             st.write(f"- {f}")
 
-    # 5️⃣ Evidence handling
+    # 6️⃣ Evidence
     st.subheader("📰 Evidence")
 
     if not evidence:
         st.info("📭 No verified evidence found from trusted news sources.")
+        # st.caption(
+        #     "ℹ️ This does **not** mean the claim is false — it means no trusted outlet confirms it yet."
+        # )
     else:
         for e in evidence:
-            if isinstance(e, dict):
-                st.write(f"- {e.get('title', 'Unknown source')}")
-            else:
-                st.write(f"- {e}")
+            st.write(f"- {e.get('title', 'Unknown source')}")
 
