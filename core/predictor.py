@@ -1,28 +1,55 @@
-import os
-import joblib
-from sentence_transformers import SentenceTransformer  # ✅ MISSING IMPORT
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = r"D:\Fake_news_Detection\models"
 
-# Load embedder (384-dim)
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+# -------------------- LOAD TOKENIZER (FIXED) --------------------
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_DIR,  
+    fix_mistral_regex=True
+)
 
-# Load trained classifier
-model = joblib.load(os.path.join(MODEL_DIR, "fake_news_embedding_model.pkl"))
+# -------------------- LOAD MODEL --------------------
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+model.eval()
 
+# -------------------- LOCK LABEL SEMANTICS --------------------
+# IMPORTANT: adjust ONLY if your training used opposite order
+ID2LABEL = {
+    0: "REAL",
+    1: "FAKE"
+}
+
+# -------------------- PREDICT FUNCTION --------------------
 def predict_news(text: str) -> dict:
-    embedding = embedder.encode(text).reshape(1, -1)
+    inputs = tokenizer(
+        text,
+        return_tensors="pt",
+        truncation=True,
+        padding=True,
+        max_length=512
+    )
 
-    probs = model.predict_proba(embedding)[0]
-    fake_prob = float(probs[0])
-    real_prob = float(probs[1])
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = torch.softmax(outputs.logits, dim=1)[0]
 
-    verdict = "FAKE" if fake_prob >= real_prob else "REAL"
+    real_prob = probs[0].item()
+    fake_prob = probs[1].item()
+
+    pred_id = int(torch.argmax(probs))
+    label = ID2LABEL[pred_id]
+
+    confidence = max(real_prob, fake_prob) * 100
 
     return {
-        "verdict": verdict,
-        "fake_prob": round(fake_prob * 100, 2),
+        "label": label,
+        "confidence": round(confidence, 2),
         "real_prob": round(real_prob * 100, 2),
-        "confidence": round(max(fake_prob, real_prob) * 100, 2)
+        "fake_prob": round(fake_prob * 100, 2)
     }
+
+
+# DEBUG (run once if needed)
+if __name__ == "__main__":
+    print("Model labels:", model.config.id2label)

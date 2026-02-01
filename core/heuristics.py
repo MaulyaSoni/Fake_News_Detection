@@ -1,29 +1,38 @@
-# core/heuristic.py
-import re
+# import re
 
-HIGH_RISK_PATTERNS = [
-    "miracle cure", "secret study", "leaked report",
-    "government hides", "they don’t want you to know",
-    "100% effective", "instantly kills", "confirmed secretly"
-]
+# SENSATIONAL = [
+#     "leaked", "shocking", "urgent", "secret",
+#     "exposed", "miracle", "deepfake", "hoax"
+# ]
 
-NUMERIC_CLAIM = re.compile(r"\b\d{2,}%|\b\d{4,}\b")
+# # def detect_red_flags(text: str) -> list:
+# #     flags = []
+# #     t = text.lower()
 
-def detect_red_flags(text: str) -> list:
-    text = text.lower()
+# #     for w in SENSATIONAL:
+# #         if w in t:
+# #             flags.append(f"Sensational phrase: '{w}'")
+
+# #     if len(text.split()) < 30:
+# #         flags.append("Very short claim")
+
+# #     if text.count("!") >= 3:
+# #         flags.append("Excessive emotional punctuation")
+
+# #     if re.search(r"\d+%", text):
+# #         flags.append("Numeric claim without citation")
+
+# #     return flags
+def detect_red_flags(text: str):
     flags = []
 
-    for p in HIGH_RISK_PATTERNS:
-        if p in text:
-            flags.append(f"High-risk phrase detected: '{p}'")
+    if len(text.split()) < 6:
+        flags.append("Very short claim")
 
-    if NUMERIC_CLAIM.search(text):
-        flags.append("Suspicious numeric claim without citation")
+    if any(x in text.lower() for x in ["killed", "dies", "dead", "plane crash"]):
+        flags.append("High-risk event claim")
 
-    if text.count("!") >= 3:
-        flags.append("Emotional exaggeration")
-
-    if len(text.split()) < 20:
-        flags.append("Very short unverifiable claim")
+    if any(c.isdigit() for c in text):
+        flags.append("Numeric claim without citation")
 
     return flags
